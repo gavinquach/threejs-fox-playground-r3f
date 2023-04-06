@@ -21,4 +21,4 @@ export default function Orange(props) {
     );
 }
 
-useGLTF.preload("/orange.glb");
+useGLTF.preload("./models/orange.glb");

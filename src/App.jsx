@@ -1,64 +1,88 @@
-import { PerspectiveCamera, OrbitControls } from '@react-three/drei';
+import { PerspectiveCamera, OrbitControls, Sky } from '@react-three/drei';
 import { useControls } from 'leva';
 import { Perf } from 'r3f-perf';
+import { Debug, Physics, RigidBody } from '@react-three/rapier';
+import { useThree } from '@react-three/fiber';
+import { useRef } from 'react';
+
 import Fox from './components/Fox';
 import Orange from './components/Orange';
-import { Debug, Physics, RigidBody } from '@react-three/rapier';
 
 export default function App() {
     const { perfVisible } = useControls({
         perfVisible: true
     });
 
-    return <>
-        {perfVisible && <Perf position='top-left' />}
+    const { sunPosition } = useControls('sky', {
+        sunPosition: { value: [3, 5, 3] }
+    });
 
-        <PerspectiveCamera
-            makeDefault
-            position={[-18, 15, -18]}
-            fov={75}
-            near={0.1}
-            far={500}
-        />
+    const { camera } = useThree();
 
-        <OrbitControls makeDefault />
+    const controlRef = useRef(null);
+    const characterRigidBody = useRef(null);
 
-        <directionalLight
-            castShadow
-            position={[1, 2, 3]}
-            intensity={3.0}
-            shadow-normalBias={0.1}
-        />
-        <ambientLight intensity={0.4} />
-        <hemisphereLight intensity={1.0} />
+    return (
+        <>
+            {perfVisible && <Perf position='top-left' />}
 
-        <Physics>
-            <RigidBody friction={0.0} restitution={0.3}>
-                <Fox />
-            </RigidBody>
+            <PerspectiveCamera
+                makeDefault
+                fov={70}
+                near={0.1}
+                far={500}
+                position={[-18, 15, -18]}
+            />
 
-            <mesh castShadow position={[- 2, 2, 0]}>
-                <sphereGeometry />
-                <meshStandardMaterial color="orange" />
-            </mesh>
+            <OrbitControls makeDefault ref={controlRef} />
 
-            <mesh castShadow position={[2, 2, 0]}>
-                <boxGeometry />
-                <meshStandardMaterial color="mediumpurple" />
-            </mesh>
+            <Sky sunPosition={sunPosition} />
+            <directionalLight
+                castShadow
+                position={sunPosition}
+                intensity={1.5}
+                shadow-normalBias={0.1}
+            />
+            <ambientLight intensity={0.4} />
+            <hemisphereLight intensity={1.0} />
 
-            <RigidBody type="fixed"><Orange /></RigidBody>
+            <Physics>
+                <RigidBody ref={characterRigidBody} friction={0.0} restitution={0.3}>
+                    <Fox rigidBody={characterRigidBody} camera={camera} orbitControl={controlRef.current} />
+                </RigidBody>
 
-            <RigidBody type="fixed">
-                <mesh receiveShadow position-y={-0.1}>
-                    <boxGeometry args={[100, 0.1, 100]} />
-                    <meshStandardMaterial color="greenyellow" />
-                </mesh>
-            </RigidBody>
+                <RigidBody>
+                    <mesh castShadow position={[- 2, 2, 0]}>
+                        <sphereGeometry />
+                        <meshStandardMaterial color="orange" />
+                    </mesh>
+                </RigidBody>
 
-            <Debug />
-        </Physics>
+                <RigidBody>
+                    <mesh castShadow position={[2, 2, 0]}>
+                        <boxGeometry />
+                        <meshStandardMaterial color="mediumpurple" />
+                    </mesh>
+                </RigidBody>
 
+                <RigidBody
+                    type="fixed"
+                    onCollisionEnter={() => console.log('enter orange')}
+                    onCollisionExit={() => console.log('exit orange')}
+                    position={[5, 2, 5]}
+                >
+                    <Orange />
+                </RigidBody>
 
-    </>;
+                <RigidBody type="fixed">
+                    <mesh receiveShadow position-y={-0.1}>
+                        <boxGeometry args={[100, 0.1, 100]} />
+                        <meshStandardMaterial color="greenyellow" />
+                    </mesh>
+                </RigidBody>
+
+                <Debug />
+            </Physics>
+        </>
+    );
 }
